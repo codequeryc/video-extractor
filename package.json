@@ -1,8 +1,15 @@
 {
   "name": "video-extractor",
   "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "node api/extract.js"
+  },
   "dependencies": {
-    "@sparticuz/chromium": "^127.0.0",
-    "puppeteer-core": "^21.5.0"
+    "playwright": "^1.46.1"
+  },
+  "engines": {
+    "node": ">=18.x"
   }
 }
