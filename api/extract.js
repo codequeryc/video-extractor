@@ -3,7 +3,6 @@ import puppeteer from "puppeteer-core";
 
 export default async function handler(req, res) {
   const { url } = req.query;
-
   if (!url) {
     return res.status(400).json({ error: "Missing url parameter" });
   }
@@ -19,10 +18,9 @@ export default async function handler(req, res) {
     });
 
     const page = await browser.newPage();
-
     let videoUrl = null;
 
-    // Listen for network requests
+    // 1. Capture all requests
     page.on("request", (req) => {
       const rurl = req.url();
       if (rurl.includes(".m3u8") || rurl.includes(".mp4")) {
@@ -32,20 +30,25 @@ export default async function handler(req, res) {
 
     await page.goto(url, { waitUntil: "networkidle2" });
 
-    // Try clicking play
+    // 2. Try clicking play button (if exists)
     try {
-      await page.click("#player-button", { timeout: 5000 });
+      await page.click("media-play-button", { timeout: 5000 });
     } catch (e) {
-      console.log("No play button, maybe autoplay.");
+      console.log("No media-play-button, maybe autoplay");
     }
 
-    // Wait for video element
+    // 3. Wait for video tag
     try {
-      await page.waitForSelector("video", { timeout: 10000 });
+      await page.waitForSelector("media-provider > video", { timeout: 10000 });
       if (!videoUrl) {
-        videoUrl = await page.$eval("video", el => el.src || null);
+        videoUrl = await page.$eval("media-provider > video", (el) => el.src || null);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.log("Video element not found");
+    }
+
+    // 4. Small delay for network sniffing
+    await page.waitForTimeout(5000);
 
     await browser.close();
 
