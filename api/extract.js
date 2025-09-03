@@ -19,23 +19,41 @@ export default async function handler(req, res) {
     });
 
     const page = await browser.newPage();
+
+    let videoUrl = null;
+
+    // Listen for network requests
+    page.on("request", (req) => {
+      const rurl = req.url();
+      if (rurl.includes(".m3u8") || rurl.includes(".mp4")) {
+        videoUrl = rurl;
+      }
+    });
+
     await page.goto(url, { waitUntil: "networkidle2" });
 
-    // Click play button if exists
+    // Try clicking play
     try {
       await page.click("#player-button", { timeout: 5000 });
     } catch (e) {
-      console.log("No play button found, maybe auto-playing...");
+      console.log("No play button, maybe autoplay.");
     }
 
-    // Wait for video source
-    await page.waitForSelector("video > source", { timeout: 10000 });
-
-    const src = await page.$eval("video > source", el => el.src);
+    // Wait for video element
+    try {
+      await page.waitForSelector("video", { timeout: 10000 });
+      if (!videoUrl) {
+        videoUrl = await page.$eval("video", el => el.src || null);
+      }
+    } catch (e) {}
 
     await browser.close();
 
-    return res.json({ video: src });
+    if (videoUrl) {
+      return res.json({ video: videoUrl });
+    } else {
+      return res.status(404).json({ error: "No video source found" });
+    }
   } catch (err) {
     if (browser) await browser.close();
     return res.status(500).json({ error: err.message });
