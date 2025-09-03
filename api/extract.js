@@ -1,40 +1,44 @@
-import { chromium } from "playwright";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium-min";
 
 export default async function handler(req, res) {
   const { url } = req.query;
+
   if (!url) {
-    return res.status(400).json({ error: "Missing url parameter" });
+    return res.status(400).json({ error: "URL required" });
   }
 
-  let browser;
   try {
-    browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
-
-    let videoUrl = null;
-
-    // listen to network requests
-    page.on("response", (resp) => {
-      const rurl = resp.url();
-      if (rurl.includes(".m3u8") || rurl.includes(".mp4")) {
-        videoUrl = rurl;
-      }
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: true,
     });
 
-    await page.goto(url, { waitUntil: "domcontentloaded" });
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: "networkidle2" });
 
-    // wait 10s to capture requests
-    await page.waitForTimeout(10000);
+    // Play button click simulate karna (agar selector pata ho)
+    try {
+      await page.click("button.play"); // apne selector ke hisaab se change karo
+      await page.waitForTimeout(3000); // thoda wait karo source load hone tak
+    } catch {}
+
+    // Source nikalna
+    const source = await page.evaluate(() => {
+      const el = document.querySelector("video source");
+      return el ? el.src : null;
+    });
 
     await browser.close();
 
-    if (videoUrl) {
-      return res.json({ video: videoUrl });
+    if (source) {
+      res.status(200).json({ source });
     } else {
-      return res.status(404).json({ error: "No video source found" });
+      res.status(404).json({ error: "Source not found" });
     }
-  } catch (err) {
-    if (browser) await browser.close();
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 }
