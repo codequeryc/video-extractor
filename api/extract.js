@@ -5,27 +5,27 @@ export default async function handler(req, res) {
   const { url } = req.query;
 
   if (!url) {
-    return res.status(400).json({ error: "URL required" });
+    return res.status(400).json({ error: "Missing url parameter" });
   }
 
   try {
     const browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath: await chromium.executablePath(), // Important for Vercel
       headless: true,
     });
 
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: "networkidle2" });
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
 
-    // Play button click simulate karna (agar selector pata ho)
+    // Optionally, agar play button ka selector pata ho to click karo:
     try {
-      await page.click("button.play"); // apne selector ke hisaab se change karo
-      await page.waitForTimeout(3000); // thoda wait karo source load hone tak
+      await page.click("button"); // selector change karna padega
+      await page.waitForTimeout(4000);
     } catch {}
 
-    // Source nikalna
+    // Source tag nikalna
     const source = await page.evaluate(() => {
       const el = document.querySelector("video source");
       return el ? el.src : null;
@@ -34,11 +34,11 @@ export default async function handler(req, res) {
     await browser.close();
 
     if (source) {
-      res.status(200).json({ source });
+      return res.status(200).json({ source });
     } else {
-      res.status(404).json({ error: "Source not found" });
+      return res.status(404).json({ error: "No source found" });
     }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 }
