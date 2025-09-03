@@ -2,6 +2,7 @@
   "name": "video-extractor",
   "version": "1.0.0",
   "dependencies": {
-    "@playwright/test": "^1.46.0"
+    "puppeteer-core": "^22.0.0",
+    "@sparticuz/chromium": "^133.0.0"
   }
 }
