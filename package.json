@@ -3,13 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "vercel dev",
-    "start": "node api/extract.js"
+    "dev": "vercel dev"
   },
   "dependencies": {
     "playwright": "^1.46.1"
   },
   "engines": {
-    "node": ">=18.x"
+    "node": ">=18"
   }
 }
