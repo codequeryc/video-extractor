@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/extract.js": {
-      "runtime": "nodejs18.x",
+      "runtime": "nodejs20.x",
       "memory": 1024,
       "maxDuration": 60
     }
