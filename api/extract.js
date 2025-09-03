@@ -1,4 +1,5 @@
-import { chromium } from "@playwright/test";
+import chromium from "@sparticuz/chromium";
+import puppeteer from "puppeteer-core";
 
 export default async function handler(req, res) {
   const { url } = req.query;
@@ -7,26 +8,36 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing url parameter" });
   }
 
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
+  let browser = null;
 
   try {
-    await page.goto(url, { waitUntil: "networkidle" });
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
 
-    // Click play button
-    await page.click("#player-button");
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: "networkidle2" });
 
-    // Wait for <video><source> to load
-    await page.waitForSelector("video > source");
+    // Click play button if exists
+    try {
+      await page.click("#player-button", { timeout: 5000 });
+    } catch (e) {
+      console.log("No play button found, maybe auto-playing...");
+    }
 
-    // Extract source
+    // Wait for video source
+    await page.waitForSelector("video > source", { timeout: 10000 });
+
     const src = await page.$eval("video > source", el => el.src);
 
     await browser.close();
 
     return res.json({ video: src });
   } catch (err) {
-    await browser.close();
+    if (browser) await browser.close();
     return res.status(500).json({ error: err.message });
   }
 }
